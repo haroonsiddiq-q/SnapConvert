@@ -1,0 +1,18 @@
+[project]
+name = "snapconvert"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = "==3.9.*"
+dependencies = [
+    "fastapi>=0.124.4",
+    "pillow>=10.4.0",
+    "rembg[cli]>=2.0.61",
+    "uvicorn[standard]>=0.34.0",
+]
+
+[project.scripts]
+snapconvert = "snapconvert.main:main"
+
+[tool.uv]
+package = true

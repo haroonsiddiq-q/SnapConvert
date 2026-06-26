@@ -1,0 +1,4 @@
+fastapi>=0.124.4
+pillow>=10.4.0
+rembg[cli]>=2.0.61
+uvicorn[standard]>=0.34.0

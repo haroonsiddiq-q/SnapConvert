@@ -1,0 +1,10 @@
+Metadata-Version: 2.4
+Name: snapconvert
+Version: 0.1.0
+Summary: Add your description here
+Requires-Python: ==3.9.*
+Description-Content-Type: text/markdown
+Requires-Dist: fastapi>=0.124.4
+Requires-Dist: pillow>=10.4.0
+Requires-Dist: rembg[cli]>=2.0.61
+Requires-Dist: uvicorn[standard]>=0.34.0

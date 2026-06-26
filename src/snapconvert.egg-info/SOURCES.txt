@@ -1,0 +1,12 @@
+README.md
+pyproject.toml
+src/snapconvert/__init__.py
+src/snapconvert/image_background_color.py
+src/snapconvert/image_background_removal.py
+src/snapconvert/main.py
+src/snapconvert.egg-info/PKG-INFO
+src/snapconvert.egg-info/SOURCES.txt
+src/snapconvert.egg-info/dependency_links.txt
+src/snapconvert.egg-info/entry_points.txt
+src/snapconvert.egg-info/requires.txt
+src/snapconvert.egg-info/top_level.txt
