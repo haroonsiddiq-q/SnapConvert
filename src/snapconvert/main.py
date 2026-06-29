@@ -26,6 +26,10 @@ from snapconvert.video_process.video_object_detect import detect_objects_video
 from snapconvert.video_process.video_watermark import watermark_text_video, watermark_image_video
 import zipfile
 import io
+import json
+import os
+import tempfile
+from PIL import Image
 import subprocess
 
 ALLOWED_VIDEO_TYPES = {"video/mp4", "video/quicktime", "video/x-msvideo", "video/webm"}
@@ -71,7 +75,7 @@ async def remove_bg_endpoint(
 
 @app.post("/image/remove-bg/batch")
 async def remove_bg_batch(
-    files: list[UploadFile],
+    files: List[UploadFile],
     model: str = Query(default="u2net", enum=AVAILABLE_MODELS),
     alpha_matting: bool = Query(default=True),
     alpha_matting_foreground_threshold: int = Query(default=240),
@@ -805,75 +809,6 @@ async def image_blur_faces_endpoint(
 @app.post("/image/detect")
 async def image_detect_endpoint(
     file: UploadFile,
-    model_size: str = Query(default="n", description=f"Model size: {', '.join(YOLO_MODEL_SIZES)} (n=nano, s=small, m=medium)"),
-    confidence: float = Query(default=0.5, description="Minimum confidence threshold 0.0–1.0"),
-    show_labels: bool = Query(default=True, description="Draw class name on each box"),
-    show_confidence: bool = Query(default=True, description="Draw confidence % on each box"),
-):
-    if not file.content_type.startswith("image/"):
-        raise HTTPException(status_code=400, detail="File must be an image")
-
-    contents = await file.read()
-    try:
-        result, detections = detect_objects(
-            contents,
-            model_size=model_size,
-            confidence=confidence,
-            show_labels=show_labels,
-            show_confidence=show_confidence,
-        )
-    except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
-
-    out_filename = file.filename.rsplit(".", 1)[0] + "_detected.png"
-    return Response(
-        content=result,
-        media_type="image/png",
-        headers={
-            "Content-Disposition": f"attachment; filename={out_filename}",
-            "X-Detections-Count": str(len(detections)),
-        }
-    )
-
-
-@app.post("/video/detect")
-async def video_detect_endpoint(
-    file: UploadFile,
-    model_size: str = Query(default="n", description=f"Model size: {', '.join(YOLO_MODEL_SIZES)} (n=nano, s=small, m=medium)"),
-    confidence: float = Query(default=0.5, description="Minimum confidence threshold 0.0–1.0"),
-    show_labels: bool = Query(default=True, description="Draw class name on each box"),
-    show_confidence: bool = Query(default=True, description="Draw confidence % on each box"),
-):
-    if file.content_type not in ALLOWED_VIDEO_TYPES:
-        raise HTTPException(status_code=400, detail="File must be a video (mp4, mov, avi, webm)")
-
-    input_ext = file.filename.rsplit(".", 1)[-1].lower()
-    contents  = await file.read()
-    try:
-        result = detect_objects_video(
-            contents,
-            input_ext=input_ext,
-            model_size=model_size,
-            confidence=confidence,
-            show_labels=show_labels,
-            show_confidence=show_confidence,
-        )
-    except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
-    except subprocess.CalledProcessError as e:
-        raise HTTPException(status_code=500, detail=f"FFmpeg error: {e.stderr.decode()}")
-
-    out_filename = file.filename.rsplit(".", 1)[0] + "_detected.mp4"
-    return Response(
-        content=result,
-        media_type="video/mp4",
-        headers={"Content-Disposition": f"attachment; filename={out_filename}"}
-    )
-
-
-@app.post("/image/detect")
-async def image_detect_endpoint(
-    file: UploadFile,
     model_size: str = Query(default="n", description=f"Model size: {', '.join(YOLO_MODEL_SIZES)} (n=fastest, m=most accurate)"),
     confidence: float = Query(default=0.5, description="Minimum confidence threshold 0.0–1.0"),
     show_labels: bool = Query(default=True, description="Show class label on each box"),
@@ -931,6 +866,8 @@ async def video_detect_endpoint(
         raise HTTPException(status_code=400, detail=str(e))
     except subprocess.CalledProcessError as e:
         raise HTTPException(status_code=500, detail=f"FFmpeg error: {e.stderr.decode()}")
+    except RuntimeError as e:
+        raise HTTPException(status_code=422, detail=str(e))
 
     out_filename = file.filename.rsplit(".", 1)[0] + "_detected.mp4"
     return Response(
@@ -965,6 +902,83 @@ async def image_upscale_endpoint(
     )
 
 
+@app.post("/image/metadata")
+async def image_metadata_endpoint(file: UploadFile):
+    if not file.content_type.startswith("image/"):
+        raise HTTPException(status_code=400, detail="File must be an image")
+
+    contents = await file.read()
+    img = Image.open(io.BytesIO(contents))
+    file_size = len(contents)
+
+    return {
+        "filename":   file.filename,
+        "format":     img.format,
+        "mode":       img.mode,
+        "width":      img.width,
+        "height":     img.height,
+        "megapixels": round((img.width * img.height) / 1_000_000, 2),
+        "file_size_kb": round(file_size / 1024, 2),
+        "has_alpha":  img.mode in ("RGBA", "LA", "PA"),
+    }
+
+
+@app.post("/video/metadata")
+async def video_metadata_endpoint(file: UploadFile):
+    if file.content_type not in ALLOWED_VIDEO_TYPES:
+        raise HTTPException(status_code=400, detail="File must be a video (mp4, mov, avi, webm)")
+
+    contents  = await file.read()
+    input_ext = file.filename.rsplit(".", 1)[-1].lower()
+    file_size = len(contents)
+
+    with tempfile.NamedTemporaryFile(suffix=f".{input_ext}", delete=False) as tmp:
+        tmp.write(contents)
+        tmp_path = tmp.name
+
+    try:
+        result = subprocess.run(
+            [
+                "ffprobe", "-v", "error",
+                "-show_entries", "stream=width,height,r_frame_rate,codec_name,codec_type",
+                "-show_entries", "format=duration,size",
+                "-of", "json",
+                tmp_path,
+            ],
+            capture_output=True, text=True, check=True,
+        )
+        info    = json.loads(result.stdout)
+        fmt     = info.get("format", {})
+        streams = info.get("streams", [])
+
+        video_stream = next((s for s in streams if s.get("codec_type") == "video"), {})
+        audio_stream = next((s for s in streams if s.get("codec_type") == "audio"), None)
+
+        # Parse fps fraction e.g. "30000/1001"
+        fps_raw = video_stream.get("r_frame_rate", "0/1")
+        num, den = fps_raw.split("/")
+        fps = round(float(num) / float(den), 2) if int(den) else 0
+
+        duration = float(fmt.get("duration", 0))
+        minutes, seconds = divmod(int(duration), 60)
+
+        return {
+            "filename":      file.filename,
+            "duration_sec":  round(duration, 2),
+            "duration":      f"{minutes}:{seconds:02d}",
+            "width":         video_stream.get("width"),
+            "height":        video_stream.get("height"),
+            "fps":           fps,
+            "video_codec":   video_stream.get("codec_name"),
+            "audio_codec":   audio_stream.get("codec_name") if audio_stream else None,
+            "file_size_mb":  round(file_size / 1024 ** 2, 2),
+        }
+    except subprocess.CalledProcessError as e:
+        raise HTTPException(status_code=500, detail=f"ffprobe error: {e.stderr}")
+    finally:
+        os.unlink(tmp_path)
+
+
 @app.get("/models")
 async def list_models():
     return {"models": AVAILABLE_MODELS}
@@ -972,7 +986,29 @@ async def list_models():
 
 @app.get("/health")
 async def health():
-    return {"status": "ok"}
+    import sys
+    import shutil
+    import platform
+
+    # FFmpeg version
+    try:
+        ffmpeg_ver = subprocess.run(
+            ["ffmpeg", "-version"], capture_output=True, text=True
+        ).stdout.splitlines()[0]
+    except Exception:
+        ffmpeg_ver = "not found"
+
+    # Disk space
+    disk = shutil.disk_usage("/")
+
+    return {
+        "status":        "ok",
+        "python":        sys.version.split()[0],
+        "platform":      platform.system(),
+        "ffmpeg":        ffmpeg_ver,
+        "disk_free_gb":  round(disk.free  / 1024 ** 3, 2),
+        "disk_total_gb": round(disk.total / 1024 ** 3, 2),
+    }
 
 
 def main():
