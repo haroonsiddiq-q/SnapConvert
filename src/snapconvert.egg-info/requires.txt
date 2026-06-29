@@ -1,4 +1,8 @@
 fastapi>=0.124.4
+onnxruntime>=1.19.2
 pillow>=10.4.0
 rembg[cli]>=2.0.61
 uvicorn[standard]>=0.34.0
+opencv-python-headless>=4.8.0
+ultralytics>=8.0.0
+realesrgan>=0.3.0

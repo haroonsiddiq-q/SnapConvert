@@ -5,6 +5,10 @@ Summary: Add your description here
 Requires-Python: ==3.9.*
 Description-Content-Type: text/markdown
 Requires-Dist: fastapi>=0.124.4
+Requires-Dist: onnxruntime>=1.19.2
 Requires-Dist: pillow>=10.4.0
 Requires-Dist: rembg[cli]>=2.0.61
 Requires-Dist: uvicorn[standard]>=0.34.0
+Requires-Dist: opencv-python-headless>=4.8.0
+Requires-Dist: ultralytics>=8.0.0
+Requires-Dist: realesrgan>=0.3.0

@@ -1,0 +1,1173 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SnapConvert</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    /* ── Tokens ── */
+    :root {
+      --bg: #F8F8F7;
+      --bg-2: #EFEFED;
+      --bg-3: #E4E4E2;
+      --border: #DDDDD9;
+      --text: #1A1A1A;
+      --text-2: #6B6B6B;
+      --accent: #2563EB;
+      --accent-h: #1D4ED8;
+      --danger: #DC2626;
+      --success: #16A34A;
+      --radius: 8px;
+      --sidebar-w: 220px;
+      --preview-bg: #FFFFFF;
+    }
+
+    [data-theme="dark"] {
+      --bg: #141414;
+      --bg-2: #1E1E1E;
+      --bg-3: #2A2A2A;
+      --border: #333333;
+      --text: #EDEDED;
+      --text-2: #888888;
+      --accent: #3B82F6;
+      --accent-h: #2563EB;
+      --danger: #EF4444;
+      --success: #22C55E;
+      --preview-bg: #1A1A1A;
+    }
+
+    /* ── Reset ── */
+    *,
+    *::before,
+    *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Inter', system-ui, sans-serif;
+      font-size: 14px;
+      background: var(--bg);
+      color: var(--text);
+      display: flex;
+      height: 100vh;
+      overflow: hidden;
+    }
+
+    /* ── Sidebar ── */
+    .sidebar {
+      width: var(--sidebar-w);
+      min-width: var(--sidebar-w);
+      background: var(--bg-2);
+      border-right: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      overflow-y: auto;
+    }
+
+    .sidebar-header {
+      padding: 18px 16px 14px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .logo {
+      font-size: 15px;
+      font-weight: 600;
+      letter-spacing: -0.3px;
+      color: var(--text);
+    }
+
+    .logo span {
+      color: var(--accent);
+    }
+
+    .nav-section {
+      padding: 10px 8px 4px;
+    }
+
+    .nav-label {
+      font-size: 11px;
+      font-weight: 500;
+      color: var(--text-2);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      padding: 0 8px;
+      margin-bottom: 4px;
+    }
+
+    .nav-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 7px 8px;
+      border-radius: var(--radius);
+      cursor: pointer;
+      color: var(--text-2);
+      font-weight: 500;
+      transition: background 0.12s, color 0.12s;
+      user-select: none;
+    }
+
+    .nav-item:hover {
+      background: var(--bg-3);
+      color: var(--text);
+    }
+
+    .nav-item.active {
+      background: var(--accent);
+      color: #fff;
+    }
+
+    .nav-item .icon {
+      font-size: 15px;
+      width: 18px;
+      text-align: center;
+    }
+
+    .sidebar-footer {
+      margin-top: auto;
+      padding: 12px 16px;
+      border-top: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .theme-label {
+      font-size: 12px;
+      color: var(--text-2);
+    }
+
+    /* Theme toggle */
+    .toggle {
+      position: relative;
+      width: 36px;
+      height: 20px;
+      cursor: pointer;
+    }
+
+    .toggle input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+
+    .toggle-track {
+      position: absolute;
+      inset: 0;
+      background: var(--bg-3);
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      transition: background 0.2s;
+    }
+
+    .toggle input:checked+.toggle-track {
+      background: var(--accent);
+      border-color: var(--accent);
+    }
+
+    .toggle-thumb {
+      position: absolute;
+      top: 2px;
+      left: 2px;
+      width: 14px;
+      height: 14px;
+      background: white;
+      border-radius: 50%;
+      transition: transform 0.2s;
+      pointer-events: none;
+    }
+
+    .toggle input:checked~.toggle-thumb {
+      transform: translateX(16px);
+    }
+
+    /* ── Main ── */
+    .main {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .topbar {
+      padding: 14px 24px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .topbar-title {
+      font-size: 15px;
+      font-weight: 600;
+    }
+
+    .topbar-sub {
+      font-size: 13px;
+      color: var(--text-2);
+    }
+
+    .workspace {
+      flex: 1;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0;
+      overflow: hidden;
+    }
+
+    /* ── Input panel ── */
+    .panel {
+      padding: 24px;
+      overflow-y: auto;
+      border-right: 1px solid var(--border);
+    }
+
+    .panel-right {
+      border-right: none;
+    }
+
+    /* Drop zone */
+    .dropzone {
+      border: 2px dashed var(--border);
+      border-radius: 12px;
+      padding: 40px 24px;
+      text-align: center;
+      cursor: pointer;
+      transition: border-color 0.15s, background 0.15s;
+      background: var(--bg-2);
+      position: relative;
+    }
+
+    .dropzone:hover,
+    .dropzone.drag-over {
+      border-color: var(--accent);
+      background: color-mix(in srgb, var(--accent) 6%, var(--bg-2));
+    }
+
+    .dropzone input[type="file"] {
+      position: absolute;
+      inset: 0;
+      opacity: 0;
+      cursor: pointer;
+      width: 100%;
+      height: 100%;
+    }
+
+    .drop-icon {
+      font-size: 32px;
+      margin-bottom: 10px;
+      display: block;
+    }
+
+    .drop-title {
+      font-weight: 600;
+      font-size: 14px;
+      margin-bottom: 4px;
+    }
+
+    .drop-sub {
+      font-size: 12px;
+      color: var(--text-2);
+    }
+
+    .file-info {
+      display: none;
+      margin-top: 12px;
+      padding: 10px 12px;
+      background: var(--bg-3);
+      border-radius: var(--radius);
+      font-size: 12px;
+      font-family: monospace;
+      color: var(--text);
+      text-align: left;
+      word-break: break-all;
+    }
+
+    .file-info.visible {
+      display: block;
+    }
+
+    /* Options */
+    .options {
+      margin-top: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    .field {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .field label {
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--text-2);
+    }
+
+    .field select,
+    .field input[type="text"],
+    .field input[type="number"] {
+      padding: 7px 10px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      background: var(--bg);
+      color: var(--text);
+      font-size: 13px;
+      font-family: inherit;
+      outline: none;
+      transition: border-color 0.12s;
+      width: 100%;
+    }
+
+    .field select:focus,
+    .field input:focus {
+      border-color: var(--accent);
+    }
+
+    .field-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+
+    /* Checkbox row */
+    .check-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      cursor: pointer;
+      user-select: none;
+    }
+
+    .check-row input[type="checkbox"] {
+      accent-color: var(--accent);
+      width: 15px;
+      height: 15px;
+      cursor: pointer;
+    }
+
+    .check-row span {
+      font-size: 13px;
+      font-weight: 500;
+    }
+
+    /* Slider */
+    .slider-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .slider-row input[type="range"] {
+      flex: 1;
+      accent-color: var(--accent);
+      cursor: pointer;
+    }
+
+    .slider-val {
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--text);
+      min-width: 28px;
+      text-align: right;
+    }
+
+    /* Alpha matting panel — slides in */
+    .alpha-panel {
+      background: var(--bg-2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      overflow: hidden;
+      max-height: 0;
+      opacity: 0;
+      transition: max-height 0.25s ease, opacity 0.2s ease, padding 0.2s ease, margin 0.2s ease;
+      padding-top: 0;
+      padding-bottom: 0;
+      margin-top: 0;
+    }
+
+    .alpha-panel.open {
+      max-height: 200px;
+      opacity: 1;
+      padding: 14px;
+      margin-top: 0;
+    }
+
+    .alpha-panel .field label {
+      color: var(--text-2);
+    }
+
+    /* Second file upload (bg replace) */
+    .bg-upload {
+      display: none;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .bg-upload.visible {
+      display: flex;
+    }
+
+    .bg-upload label {
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--text-2);
+    }
+
+    .bg-upload input[type="file"] {
+      padding: 6px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      background: var(--bg);
+      color: var(--text);
+      font-size: 12px;
+      cursor: pointer;
+      width: 100%;
+    }
+
+    /* Color picker row */
+    .color-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .color-row input[type="color"] {
+      width: 36px;
+      height: 32px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 2px;
+      background: var(--bg);
+      cursor: pointer;
+    }
+
+    .color-row input[type="text"] {
+      flex: 1;
+    }
+
+    /* Process button */
+    .btn-process {
+      margin-top: 20px;
+      width: 100%;
+      padding: 10px;
+      background: var(--accent);
+      color: white;
+      border: none;
+      border-radius: var(--radius);
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.12s, opacity 0.12s;
+      font-family: inherit;
+    }
+
+    .btn-process:hover {
+      background: var(--accent-h);
+    }
+
+    .btn-process:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    /* ── Result panel ── */
+    .result-placeholder {
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      color: var(--text-2);
+    }
+
+    .result-placeholder .big-icon {
+      font-size: 40px;
+      opacity: 0.3;
+    }
+
+    .result-placeholder p {
+      font-size: 13px;
+    }
+
+    .result-area {
+      display: none;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .result-area.visible {
+      display: flex;
+      animation: fadeIn 0.3s ease;
+    }
+
+    @keyframes fadeIn {
+      from {
+        opacity: 0;
+        transform: translateY(6px);
+      }
+
+      to {
+        opacity: 1;
+        transform: none;
+      }
+    }
+
+    .result-preview {
+      border-radius: 10px;
+      overflow: hidden;
+      background: var(--preview-bg);
+      border: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 200px;
+    }
+
+    .result-preview img,
+    .result-preview video {
+      max-width: 100%;
+      max-height: 400px;
+      display: block;
+      border-radius: 8px;
+    }
+
+    .result-meta {
+      background: var(--bg-2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 12px 14px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+    }
+
+    .result-filename {
+      font-size: 12px;
+      font-family: monospace;
+      color: var(--text);
+      word-break: break-all;
+    }
+
+    .btn-download {
+      padding: 7px 14px;
+      background: var(--accent);
+      color: white;
+      border: none;
+      border-radius: var(--radius);
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      white-space: nowrap;
+      font-family: inherit;
+      transition: background 0.12s;
+      flex-shrink: 0;
+    }
+
+    .btn-download:hover {
+      background: var(--accent-h);
+    }
+
+    /* Status / error */
+    .status {
+      padding: 10px 14px;
+      border-radius: var(--radius);
+      font-size: 13px;
+      display: none;
+    }
+
+    .status.visible {
+      display: block;
+    }
+
+    .status.processing {
+      background: color-mix(in srgb, var(--accent) 10%, var(--bg-2));
+      color: var(--accent);
+      border: 1px solid color-mix(in srgb, var(--accent) 25%, var(--border));
+    }
+
+    .status.error {
+      background: color-mix(in srgb, var(--danger) 10%, var(--bg-2));
+      color: var(--danger);
+      border: 1px solid color-mix(in srgb, var(--danger) 25%, var(--border));
+    }
+  </style>
+</head>
+
+<body>
+
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div class="sidebar-header">
+      <div class="logo">Snap<span>Convert</span></div>
+    </div>
+
+    <nav>
+      <div class="nav-section">
+        <div class="nav-label">Remove BG</div>
+        <div class="nav-item active" data-tool="image-remove-bg">
+          <span class="icon">🖼</span> Image
+        </div>
+        <div class="nav-item" data-tool="image-remove-bg-batch">
+          <span class="icon">📦</span> Image Batch
+        </div>
+        <div class="nav-item" data-tool="image-color-bg">
+          <span class="icon">🎨</span> Color BG
+        </div>
+        <div class="nav-item" data-tool="image-replace-bg">
+          <span class="icon">🌄</span> Replace BG
+        </div>
+        <div class="nav-item" data-tool="video-remove-bg">
+          <span class="icon">🎬</span> Video
+        </div>
+        <div class="nav-item" data-tool="video-color-bg">
+          <span class="icon">🎨</span> Video Color BG
+        </div>
+        <div class="nav-item" data-tool="video-replace-bg">
+          <span class="icon">🌄</span> Video Replace BG
+        </div>
+      </div>
+
+      <div class="nav-section">
+        <div class="nav-label">Convert</div>
+        <div class="nav-item" data-tool="image-convert">
+          <span class="icon">🖼</span> Image
+        </div>
+        <div class="nav-item" data-tool="video-convert">
+          <span class="icon">🎬</span> Video
+        </div>
+      </div>
+    </nav>
+
+    <div class="sidebar-footer">
+      <span class="theme-label">Dark mode</span>
+      <label class="toggle">
+        <input type="checkbox" id="themeToggle">
+        <div class="toggle-track"></div>
+        <div class="toggle-thumb"></div>
+      </label>
+    </div>
+  </aside>
+
+  <!-- Main -->
+  <main class="main">
+    <div class="topbar">
+      <span class="topbar-title" id="toolTitle">Remove Background</span>
+      <span class="topbar-sub" id="toolSub">— Image</span>
+    </div>
+
+    <div class="workspace">
+      <!-- Input panel -->
+      <div class="panel">
+
+        <!-- Drop zone -->
+        <div class="dropzone" id="dropzone">
+          <input type="file" id="fileInput" accept="image/*">
+          <span class="drop-icon" id="dropIcon">🖼</span>
+          <div class="drop-title">Drop file here or click to browse</div>
+          <div class="drop-sub" id="dropSub">PNG, JPG, WEBP, AVIF</div>
+        </div>
+        <div class="file-info" id="fileInfo"></div>
+
+        <!-- Second file (bg replace) -->
+        <div class="bg-upload" id="bgUpload">
+          <label>Background image</label>
+          <input type="file" id="bgFileInput" accept="image/*">
+        </div>
+
+        <!-- Tool options -->
+        <div class="options" id="toolOptions"></div>
+
+        <!-- Process -->
+        <button class="btn-process" id="btnProcess">Process</button>
+      </div>
+
+      <!-- Result panel -->
+      <div class="panel panel-right">
+        <div class="result-placeholder" id="resultPlaceholder">
+          <span class="big-icon">✨</span>
+          <p>Your result will appear here</p>
+        </div>
+
+        <div class="status" id="status"></div>
+
+        <div class="result-area" id="resultArea">
+          <div class="result-preview" id="resultPreview"></div>
+          <div class="result-meta">
+            <span class="result-filename" id="resultFilename"></span>
+            <button class="btn-download" id="btnDownload">Download</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <script>
+    // ── Tool definitions ──────────────────────────────────────────────────────────
+    const MODELS = ['u2net', 'u2net_human_seg', 'isnet-general-use', 'birefnet-general', 'birefnet-portrait'];
+    const IMAGE_FORMATS = ['jpg', 'png', 'webp', 'avif'];
+    const VIDEO_FORMATS = ['mp4', 'webm', 'mov', 'gif'];
+
+    const TOOLS = {
+      'image-remove-bg': {
+        title: 'Remove Background', sub: '— Image',
+        accept: 'image/*', dropSub: 'PNG, JPG, WEBP, AVIF', dropIcon: '🖼',
+        endpoint: (p) => `/image/remove-bg?${p}`,
+        options: removeBgOptions(false),
+      },
+      'image-remove-bg-batch': {
+        title: 'Remove Background', sub: '— Image Batch',
+        accept: 'image/*', dropSub: 'Select multiple images', dropIcon: '📦',
+        multiple: true,
+        endpoint: (p) => `/image/remove-bg/batch?${p}`,
+        options: removeBgOptions(false),
+      },
+      'image-color-bg': {
+        title: 'Color Background', sub: '— Image',
+        accept: 'image/*', dropSub: 'PNG, JPG, WEBP, AVIF', dropIcon: '🎨',
+        endpoint: (p) => `/image/color-bg?${p}`,
+        options: [...removeBgOptions(false), colorOption()],
+      },
+      'image-replace-bg': {
+        title: 'Replace Background', sub: '— Image',
+        accept: 'image/*', dropSub: 'PNG, JPG, WEBP, AVIF', dropIcon: '🌄',
+        needsBg: true,
+        endpoint: (p) => `/image/replace-bg?${p}`,
+        options: removeBgOptions(false),
+      },
+      'video-remove-bg': {
+        title: 'Remove Background', sub: '— Video',
+        accept: 'video/*', dropSub: 'MP4, MOV, AVI, WEBM', dropIcon: '🎬',
+        endpoint: (p) => `/video/remove-bg?${p}`,
+        options: removeBgOptions(true),
+      },
+      'video-color-bg': {
+        title: 'Color Background', sub: '— Video',
+        accept: 'video/*', dropSub: 'MP4, MOV, AVI, WEBM', dropIcon: '🎨',
+        endpoint: (p) => `/video/color-bg?${p}`,
+        options: [...removeBgOptions(true), colorOption()],
+      },
+      'video-replace-bg': {
+        title: 'Replace Background', sub: '— Video',
+        accept: 'video/*', dropSub: 'MP4, MOV, AVI, WEBM', dropIcon: '🌄',
+        needsBg: true,
+        endpoint: (p) => `/video/replace-bg?${p}`,
+        options: removeBgOptions(true),
+      },
+      'image-convert': {
+        title: 'Convert', sub: '— Image',
+        accept: 'image/*', dropSub: 'PNG, JPG, WEBP, AVIF', dropIcon: '🖼',
+        endpoint: (p) => `/image/convert?${p}`,
+        options: imageConvertOptions(),
+      },
+      'video-convert': {
+        title: 'Convert', sub: '— Video',
+        accept: 'video/*', dropSub: 'MP4, MOV, AVI, WEBM', dropIcon: '🎬',
+        endpoint: (p) => `/video/convert?${p}`,
+        options: videoConvertOptions(),
+      },
+    };
+
+    // ── Option builders ───────────────────────────────────────────────────────────
+    function removeBgOptions() {
+      return [
+        { type: 'select', id: 'model', label: 'Model', options: MODELS, default: 'u2net' },
+        { type: 'checkbox', id: 'alpha_matting', label: 'Alpha matting', default: false, triggersPanel: 'alphaPanel' },
+        {
+          type: 'panel', id: 'alphaPanel', fields: [
+            { type: 'slider', id: 'alpha_matting_foreground_threshold', label: 'Foreground threshold', min: 0, max: 255, default: 240 },
+            { type: 'slider', id: 'alpha_matting_background_threshold', label: 'Background threshold', min: 0, max: 255, default: 10 },
+            { type: 'slider', id: 'alpha_matting_erode_size', label: 'Erode size', min: 0, max: 40, default: 10 },
+          ]
+        },
+      ];
+    }
+
+    function colorOption() {
+      return { type: 'color', id: 'color', label: 'Background color', default: '#ffffff' };
+    }
+
+    function imageConvertOptions() {
+      return [
+        { type: 'select', id: 'output_format', label: 'Output format', options: IMAGE_FORMATS, default: 'png' },
+        { type: 'slider', id: 'quality', label: 'Quality (JPEG / WEBP / AVIF)', min: 1, max: 95, default: 85 },
+        {
+          type: 'row', fields: [
+            { type: 'number', id: 'width', label: 'Width (px)', placeholder: 'e.g. 1920' },
+            { type: 'number', id: 'height', label: 'Height (px)', placeholder: 'e.g. 1080' },
+          ]
+        },
+        { type: 'number', id: 'scale', label: 'Scale (%)', placeholder: 'e.g. 50  (overrides width/height)' },
+      ];
+    }
+
+    function videoConvertOptions() {
+      return [
+        { type: 'select', id: 'output_format', label: 'Output format', options: VIDEO_FORMATS, default: 'mp4' },
+        { type: 'slider', id: 'crf', label: 'Quality (CRF, lower = better, ignored for GIF)', min: 0, max: 51, default: 23 },
+        {
+          type: 'row', fields: [
+            { type: 'text', id: 'start_time', label: 'Start time', placeholder: 'e.g. 0:10' },
+            { type: 'text', id: 'end_time', label: 'End time', placeholder: 'e.g. 0:30' },
+          ]
+        },
+      ];
+    }
+
+    // ── Render options ────────────────────────────────────────────────────────────
+    function renderOptions(options) {
+      const container = document.getElementById('toolOptions');
+      container.innerHTML = '';
+
+      for (const opt of options) {
+        if (opt.type === 'select') {
+          container.appendChild(makeSelect(opt));
+        } else if (opt.type === 'checkbox') {
+          container.appendChild(makeCheckbox(opt));
+        } else if (opt.type === 'slider') {
+          container.appendChild(makeSlider(opt));
+        } else if (opt.type === 'number') {
+          container.appendChild(makeNumber(opt));
+        } else if (opt.type === 'text') {
+          container.appendChild(makeText(opt));
+        } else if (opt.type === 'color') {
+          container.appendChild(makeColor(opt));
+        } else if (opt.type === 'panel') {
+          container.appendChild(makePanel(opt));
+        } else if (opt.type === 'row') {
+          container.appendChild(makeRow(opt));
+        }
+      }
+    }
+
+    function makeSelect(opt) {
+      const wrap = el('div', 'field');
+      wrap.innerHTML = `<label>${opt.label}</label>`;
+      const sel = el('select', '');
+      sel.id = opt.id;
+      opt.options.forEach(o => { const op = document.createElement('option'); op.value = o; op.textContent = o; if (o === opt.default) op.selected = true; sel.appendChild(op); });
+      wrap.appendChild(sel);
+      return wrap;
+    }
+
+    function makeCheckbox(opt) {
+      const wrap = el('div', 'field');
+      const label = el('label', 'check-row');
+      const cb = document.createElement('input');
+      cb.type = 'checkbox'; cb.id = opt.id; cb.checked = opt.default;
+      label.appendChild(cb);
+      const span = document.createElement('span');
+      span.textContent = opt.label;
+      label.appendChild(span);
+      wrap.appendChild(label);
+
+      if (opt.triggersPanel) {
+        cb.addEventListener('change', () => {
+          const panel = document.getElementById(opt.triggersPanel);
+          if (panel) panel.classList.toggle('open', cb.checked);
+        });
+      }
+      return wrap;
+    }
+
+    function makeSlider(opt) {
+      const wrap = el('div', 'field');
+      wrap.innerHTML = `<label>${opt.label}</label>`;
+      const row = el('div', 'slider-row');
+      const slider = document.createElement('input');
+      slider.type = 'range'; slider.id = opt.id;
+      slider.min = opt.min; slider.max = opt.max; slider.value = opt.default;
+      const val = el('span', 'slider-val');
+      val.textContent = opt.default;
+      slider.addEventListener('input', () => { val.textContent = slider.value; });
+      row.appendChild(slider); row.appendChild(val);
+      wrap.appendChild(row);
+      return wrap;
+    }
+
+    function makeNumber(opt) {
+      const wrap = el('div', 'field');
+      wrap.innerHTML = `<label>${opt.label}</label>`;
+      const inp = document.createElement('input');
+      inp.type = 'number'; inp.id = opt.id; inp.placeholder = opt.placeholder || '';
+      wrap.appendChild(inp);
+      return wrap;
+    }
+
+    function makeText(opt) {
+      const wrap = el('div', 'field');
+      wrap.innerHTML = `<label>${opt.label}</label>`;
+      const inp = document.createElement('input');
+      inp.type = 'text'; inp.id = opt.id; inp.placeholder = opt.placeholder || '';
+      wrap.appendChild(inp);
+      return wrap;
+    }
+
+    function makeColor(opt) {
+      const wrap = el('div', 'field');
+      wrap.innerHTML = `<label>${opt.label}</label>`;
+      const row = el('div', 'color-row');
+      const picker = document.createElement('input');
+      picker.type = 'color'; picker.value = opt.default;
+      const text = document.createElement('input');
+      text.type = 'text'; text.id = opt.id; text.value = opt.default;
+      picker.addEventListener('input', () => { text.value = picker.value; });
+      text.addEventListener('input', () => { if (/^#[0-9a-fA-F]{6}$/.test(text.value)) picker.value = text.value; });
+      row.appendChild(picker); row.appendChild(text);
+      wrap.appendChild(row);
+      return wrap;
+    }
+
+    function makePanel(opt) {
+      const panel = el('div', 'alpha-panel');
+      panel.id = opt.id;
+      for (const f of opt.fields) {
+        panel.appendChild(makeSlider(f));
+      }
+      // Open immediately if the linked checkbox is already checked
+      requestAnimationFrame(() => {
+        const cb = document.getElementById('alpha_matting');
+        if (cb && cb.checked) panel.classList.add('open');
+      });
+      return panel;
+    }
+
+    function makeRow(opt) {
+      const row = el('div', 'field-row');
+      for (const f of opt.fields) {
+        if (f.type === 'number') row.appendChild(makeNumber(f));
+        else if (f.type === 'text') row.appendChild(makeText(f));
+      }
+      return row;
+    }
+
+    function el(tag, cls) {
+      const e = document.createElement(tag);
+      if (cls) e.className = cls;
+      return e;
+    }
+
+    // ── Tool switching ────────────────────────────────────────────────────────────
+    let currentTool = 'image-remove-bg';
+
+    function switchTool(toolId) {
+      currentTool = toolId;
+      const tool = TOOLS[toolId];
+
+      // Sidebar active state
+      document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+      document.querySelector(`[data-tool="${toolId}"]`).classList.add('active');
+
+      // Topbar
+      document.getElementById('toolTitle').textContent = tool.title;
+      document.getElementById('toolSub').textContent = tool.sub;
+
+      // Drop zone
+      document.getElementById('dropIcon').textContent = tool.dropIcon;
+      document.getElementById('dropSub').textContent = tool.dropSub;
+      const fi = document.getElementById('fileInput');
+      fi.accept = tool.accept;
+      fi.multiple = !!tool.multiple;
+      fi.value = '';
+      document.getElementById('fileInfo').textContent = '';
+      document.getElementById('fileInfo').classList.remove('visible');
+
+      // BG upload
+      const bgUpload = document.getElementById('bgUpload');
+      bgUpload.classList.toggle('visible', !!tool.needsBg);
+
+      // Options
+      renderOptions(tool.options);
+
+      // Clear result
+      clearResult();
+    }
+
+    // ── File handling ─────────────────────────────────────────────────────────────
+    const dropzone = document.getElementById('dropzone');
+    const fileInput = document.getElementById('fileInput');
+    const fileInfo = document.getElementById('fileInfo');
+
+    dropzone.addEventListener('dragover', e => { e.preventDefault(); dropzone.classList.add('drag-over'); });
+    dropzone.addEventListener('dragleave', () => dropzone.classList.remove('drag-over'));
+    dropzone.addEventListener('drop', e => {
+      e.preventDefault(); dropzone.classList.remove('drag-over');
+      if (e.dataTransfer.files.length) { fileInput.files = e.dataTransfer.files; showFileInfo(e.dataTransfer.files); }
+    });
+    fileInput.addEventListener('change', () => { if (fileInput.files.length) showFileInfo(fileInput.files); });
+
+    function showFileInfo(files) {
+      if (files.length === 1) {
+        fileInfo.textContent = `${files[0].name}  (${formatBytes(files[0].size)})`;
+      } else {
+        fileInfo.textContent = `${files.length} files selected`;
+      }
+      fileInfo.classList.add('visible');
+    }
+
+    function formatBytes(b) {
+      if (b < 1024) return `${b} B`;
+      if (b < 1048576) return `${(b / 1024).toFixed(1)} KB`;
+      return `${(b / 1048576).toFixed(1)} MB`;
+    }
+
+    // ── Collect params ────────────────────────────────────────────────────────────
+    function collectParams() {
+      const params = new URLSearchParams();
+      const tool = TOOLS[currentTool];
+
+      function collectFrom(options) {
+        for (const opt of options) {
+          if (opt.type === 'panel') { collectFrom(opt.fields); continue; }
+          if (opt.type === 'row') { collectFrom(opt.fields); continue; }
+
+          const el = document.getElementById(opt.id);
+          if (!el) continue;
+
+          if (opt.type === 'checkbox') {
+            params.set(opt.id, el.checked);
+          } else {
+            const v = el.value.trim();
+            if (v !== '') params.set(opt.id, v);
+          }
+        }
+      }
+      collectFrom(tool.options);
+      return params;
+    }
+
+    // ── Process ───────────────────────────────────────────────────────────────────
+    document.getElementById('btnProcess').addEventListener('click', async () => {
+      const tool = TOOLS[currentTool];
+      const files = fileInput.files;
+
+      if (!files.length) { showError('Please select a file first.'); return; }
+
+      const params = collectParams();
+      const endpoint = tool.endpoint(params.toString());
+
+      const formData = new FormData();
+      if (tool.multiple) {
+        Array.from(files).forEach(f => formData.append('files', f));
+      } else {
+        formData.append('file', files[0]);
+      }
+
+      if (tool.needsBg) {
+        const bgFile = document.getElementById('bgFileInput').files[0];
+        if (!bgFile) { showError('Please select a background image.'); return; }
+        formData.append('background', bgFile);
+      }
+
+      showProcessing();
+
+      try {
+        const res = await fetch(endpoint, { method: 'POST', body: formData });
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({ detail: 'Unknown error' }));
+          showError(err.detail || 'Something went wrong.');
+          return;
+        }
+
+        const blob = await res.blob();
+        const disposition = res.headers.get('Content-Disposition') || '';
+        const match = disposition.match(/filename=(.+)/);
+        const filename = match ? match[1].replace(/['"]/g, '') : 'result';
+
+        showResult(blob, filename);
+      } catch (e) {
+        showError('Could not reach the server. Is SnapConvert running?');
+      }
+    });
+
+    // ── Result helpers ────────────────────────────────────────────────────────────
+    let resultURL = null;
+
+    function showProcessing() {
+      clearResult();
+      const s = document.getElementById('status');
+      s.textContent = '⏳ Processing… this may take a moment for video.';
+      s.className = 'status visible processing';
+      document.getElementById('btnProcess').disabled = true;
+    }
+
+    function showError(msg) {
+      clearResult();
+      const s = document.getElementById('status');
+      s.textContent = `⚠ ${msg}`;
+      s.className = 'status visible error';
+      document.getElementById('btnProcess').disabled = false;
+    }
+
+    function showResult(blob, filename) {
+      document.getElementById('status').className = 'status';
+      document.getElementById('btnProcess').disabled = false;
+      document.getElementById('resultPlaceholder').style.display = 'none';
+
+      if (resultURL) URL.revokeObjectURL(resultURL);
+      resultURL = URL.createObjectURL(blob);
+
+      const preview = document.getElementById('resultPreview');
+      preview.innerHTML = '';
+
+      if (blob.type.startsWith('image/')) {
+        const img = document.createElement('img');
+        img.src = resultURL;
+        preview.appendChild(img);
+      } else if (blob.type.startsWith('video/')) {
+        const video = document.createElement('video');
+        video.src = resultURL; video.controls = true; video.autoplay = false;
+        preview.appendChild(video);
+      } else if (blob.type === 'application/zip') {
+        preview.innerHTML = `<div style="padding:32px;text-align:center;color:var(--text-2)"><div style="font-size:40px;margin-bottom:10px">📦</div><div style="font-size:13px">Batch complete — ${filename}</div></div>`;
+      } else {
+        preview.innerHTML = `<div style="padding:20px;color:var(--text-2)">📦 File ready to download</div>`;
+      }
+
+      document.getElementById('resultFilename').textContent = filename;
+
+      const btn = document.getElementById('btnDownload');
+      btn.onclick = () => {
+        const a = document.createElement('a');
+        a.href = resultURL; a.download = filename; a.click();
+      };
+
+      document.getElementById('resultArea').classList.add('visible');
+    }
+
+    function clearResult() {
+      document.getElementById('resultArea').classList.remove('visible');
+      document.getElementById('resultPlaceholder').style.display = '';
+      document.getElementById('status').className = 'status';
+    }
+
+    // ── Theme toggle ──────────────────────────────────────────────────────────────
+    document.getElementById('themeToggle').addEventListener('change', function () {
+      document.documentElement.setAttribute('data-theme', this.checked ? 'dark' : 'light');
+    });
+
+    // ── Nav ───────────────────────────────────────────────────────────────────────
+    document.querySelectorAll('.nav-item').forEach(item => {
+      item.addEventListener('click', () => switchTool(item.dataset.tool));
+    });
+
+    // ── Init ──────────────────────────────────────────────────────────────────────
+    switchTool('image-remove-bg');
+  </script>
+</body>
+
+</html>
