@@ -241,6 +241,8 @@
     overflow-y: auto;
     display: flex;
     flex-direction: column;
+    padding: 20px;
+    margin: -20px;
     gap: 16px;
   }
 
@@ -458,15 +460,6 @@
     color: var(--text-2);
   }
 
-  .dropzone-sm {
-    padding: 22px 24px;
-  }
-
-  .dropzone-sm .drop-icon {
-    font-size: 24px;
-    margin-bottom: 6px;
-  }
-
   /* Color picker row */
   .color-row {
     display: flex;
@@ -533,7 +526,6 @@
 
   .result-placeholder .big-icon {
     font-size: 40px;
-    opacity: 0.3;
   }
 
   .result-placeholder p {

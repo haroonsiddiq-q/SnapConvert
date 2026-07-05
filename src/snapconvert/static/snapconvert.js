@@ -6,7 +6,7 @@ const VIDEO_FORMATS = ['mp4', 'webm', 'mov', 'gif'];
 const TOOLS = {
   'image-remove-bg': {
     title: 'Remove Background', sub: '— Image',
-    accept: 'image/*', dropSub: 'PNG, JPG, WEBP, AVIF', dropIcon: '🖼',
+    accept: 'image/*', dropSub: 'PNG, JPG, WEBP, AVIF', dropIcon: '🖼️',
     merged: true, // drives Single/Batch toggle
     endpointSingle: (p) => `/image/remove-bg?${p}`,
     endpointBatch: (p) => `/image/remove-bg/batch?${p}`,
@@ -47,7 +47,7 @@ const TOOLS = {
   },
   'image-convert': {
     title: 'Convert', sub: '— Image',
-    accept: 'image/*', dropSub: 'PNG, JPG, WEBP, AVIF', dropIcon: '🖼',
+    accept: 'image/*', dropSub: 'PNG, JPG, WEBP, AVIF', dropIcon: '🖼️',
     endpoint: (p) => `/image/convert?${p}`,
     options: imageConvertOptions(),
   },
