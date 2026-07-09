@@ -70,6 +70,18 @@ const TOOLS = {
     endpoint: (p) => `/image/filters?${p}`,
     options: imageFiltersOptions(),
   },
+  'image-pixelate': {
+    title: 'Pixelate', sub: '— Image',
+    accept: 'image/*', dropSub: 'PNG, JPG, WEBP, AVIF', dropIcon: '🕹️',
+    endpoint: (p) => `/image/pixelate?${p}`,
+    options: imagePixelateOptions(),
+  },
+  'image-pixelate-gif': {
+    title: 'Pixelate GIF', sub: '— Image',
+    accept: 'image/*', dropSub: 'PNG, JPG, WEBP, AVIF', dropIcon: '👾',
+    endpoint: (p) => `/image/pixelate/gif?${p}`,
+    options: imagePixelateGifOptions(),
+  },
 };
 
 // ── Option builders ───────────────────────────────────────────────────────────
@@ -157,19 +169,29 @@ function imageFlipOptions() {
 
 function imageFiltersOptions() {
   return [
-    { type: 'slider', id: 'brightness', label: 'Brightness', min: 0, max: 3, step: 0.05, default: 1 },
-    { type: 'slider', id: 'contrast', label: 'Contrast', min: 0, max: 3, step: 0.05, default: 1 },
-    { type: 'slider', id: 'saturation', label: 'Saturation', min: 0, max: 3, step: 0.05, default: 1 },
-    { type: 'slider', id: 'sharpness', label: 'Sharpness', min: 0, max: 3, step: 0.05, default: 1 },
-  ];
-}
-
-function imageFiltersOptions() {
-  return [
     { type: 'slider', id: 'brightness', label: 'Brightness', min: 0, max: 2, step: 0.05, default: 1 },
     { type: 'slider', id: 'contrast', label: 'Contrast', min: 0, max: 2, step: 0.05, default: 1 },
     { type: 'slider', id: 'saturation', label: 'Saturation', min: 0, max: 2, step: 0.05, default: 1 },
     { type: 'slider', id: 'sharpness', label: 'Sharpness', min: 0, max: 2, step: 0.05, default: 1 },
+  ];
+}
+
+function imagePixelateOptions() {
+  return [
+    { type: 'slider', id: 'pixel_size', label: 'Pixel block size', min: 2, max: 64, step: 1, default: 16 },
+    { type: 'slider', id: 'palette_colors', label: 'Color palette (0 = full color)', min: 0, max: 64, step: 1, default: 0 },
+    { type: 'select', id: 'method', label: 'Method', options: ['nearest', 'palette'], default: 'nearest' },
+  ];
+}
+
+function imagePixelateGifOptions() {
+  return [
+    { type: 'slider', id: 'pixel_size', label: 'Pixel block size', min: 2, max: 64, step: 1, default: 16 },
+    { type: 'slider', id: 'palette_colors', label: 'Color palette', min: 2, max: 64, step: 1, default: 32 },
+    { type: 'select', id: 'effect', label: 'Animation', options: ['bob', 'shimmer', 'glow'], default: 'bob' },
+    { type: 'slider', id: 'frame_count', label: 'Frame count', min: 2, max: 24, step: 1, default: 8 },
+    { type: 'slider', id: 'frame_duration_ms', label: 'Frame duration (ms)', min: 40, max: 400, step: 10, default: 120 },
+    { type: 'slider', id: 'intensity', label: 'Effect intensity', min: 1, max: 10, step: 1, default: 3 },
   ];
 }
 
@@ -638,7 +660,6 @@ function showResult(blob, filename) {
 
   if (hasInputPreview) {
     bar.classList.add('visible');
-    // Restore input preview content visibility, default to After view
     inputPreview.style.display = 'none';
     document.getElementById('resultArea').classList.add('visible');
     btnAfter.classList.add('active'); btnBefore.classList.remove('active');

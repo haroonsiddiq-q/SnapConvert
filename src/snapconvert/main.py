@@ -14,6 +14,7 @@ from snapconvert.converter.video_converter import convert_video, FORMAT_CONFIG a
 from snapconvert.image_process.image_crop import crop_manual, crop_smart
 from snapconvert.image_process.image_rotate_flip import rotate_image, flip_image, FLIP_DIRECTIONS
 from snapconvert.image_process.image_filters import apply_filters
+from snapconvert.image_process.image_pixelate import pixelate_image, pixelate_to_gif
 from snapconvert.image_process.image_exif import read_exif, strip_exif
 from snapconvert.image_process.image_to_pdf import images_to_pdf, PAGE_SIZES, FIT_MODES
 from snapconvert.video_process.video_to_frames import extract_frames as extract_video_frames
@@ -468,6 +469,70 @@ async def image_filters_endpoint(
     return Response(
         content=result,
         media_type="image/png",
+        headers={"Content-Disposition": f"attachment; filename={out_filename}"}
+    )
+
+
+@app.post("/image/pixelate")
+async def image_pixelate_endpoint(
+    file: UploadFile,
+    pixel_size: int = Query(default=16, description="Block size in px — bigger is chunkier"),
+    palette_colors: int = Query(default=0, description="Colors to quantize to (0 = full color, try 16 or 32 for retro look)"),
+    method: str = Query(default="nearest", description="'nearest' or 'palette'"),
+):
+    if not file.content_type.startswith("image/"):
+        raise HTTPException(status_code=400, detail="File must be an image")
+
+    contents = await file.read()
+    try:
+        result = pixelate_image(
+            contents,
+            pixel_size=pixel_size,
+            palette_colors=palette_colors,
+            method=method,
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+    out_filename = file.filename.rsplit(".", 1)[0] + "_pixelated.png"
+    return Response(
+        content=result,
+        media_type="image/png",
+        headers={"Content-Disposition": f"attachment; filename={out_filename}"}
+    )
+
+
+@app.post("/image/pixelate/gif")
+async def image_pixelate_gif_endpoint(
+    file: UploadFile,
+    pixel_size: int = Query(default=16, description="Block size in px — bigger is chunkier"),
+    palette_colors: int = Query(default=32, description="Colors to quantize to for the retro look"),
+    effect: str = Query(default="bob", description="'bob', 'shimmer', or 'glow'"),
+    frame_count: int = Query(default=8, description="Number of frames in the loop"),
+    frame_duration_ms: int = Query(default=120, description="Milliseconds each frame is shown"),
+    intensity: int = Query(default=3, description="Effect strength"),
+):
+    if not file.content_type.startswith("image/"):
+        raise HTTPException(status_code=400, detail="File must be an image")
+
+    contents = await file.read()
+    try:
+        result = pixelate_to_gif(
+            contents,
+            pixel_size=pixel_size,
+            palette_colors=palette_colors,
+            effect=effect,
+            frame_count=frame_count,
+            frame_duration_ms=frame_duration_ms,
+            intensity=intensity,
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+    out_filename = file.filename.rsplit(".", 1)[0] + "_pixelated.gif"
+    return Response(
+        content=result,
+        media_type="image/gif",
         headers={"Content-Disposition": f"attachment; filename={out_filename}"}
     )
 
